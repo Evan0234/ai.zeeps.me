@@ -4,12 +4,10 @@
   "description": "AI integration for ai.zeeps.me",
   "main": "ai.js",
   "scripts": {
-    "start": "node ai.js",
-    "build": "echo 'Build command here'"
+    "build": "echo 'Building the project'",
+    "start": "node ai.js"
   },
   "dependencies": {
     "openai": "^3.0.0"
-  },
-  "author": "Your Name",
-  "license": "MIT"
+  }
 }
