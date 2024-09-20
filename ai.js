@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 
-const token = process.env["TOKEN_AI"];  // Using TOKEN_AI instead of GITHUB_TOKEN or 4o_TOKEN
+const token = process.env["TOKEN_AI"];  
 const endpoint = "https://models.inference.ai.azure.com";
 const modelName = "gpt-4o";
 
