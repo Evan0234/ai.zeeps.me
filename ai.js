@@ -1,95 +1,80 @@
-import OpenAI from "openai";
+import fetch from "node-fetch";
+import dotenv from "dotenv";
 
-const token = process.env["TOKEN_AI"];  
+// Load environment variables from .env file
+dotenv.config();
+
+const token = process.env.TOKEN_AI; // Use the token injected by GitHub Actions
 const endpoint = "https://models.inference.ai.azure.com";
 const modelName = "gpt-4o";
 
-function getFlightInfo({originCity, destinationCity}) {
+// Function to get flight information
+function getFlightInfo({ originCity, destinationCity }) {
   if (originCity === "Seattle" && destinationCity === "Miami") {
     return JSON.stringify({
       airline: "Delta",
       flight_number: "DL123",
       flight_date: "May 7th, 2024",
-      flight_time: "10:00AM",
+      flight_time: "10:00 AM",
     });
   }
   return JSON.stringify({ error: "No flights found between the cities" });
 }
 
+// Map function names to corresponding logic
 const namesToFunctions = {
   getFlightInfo: (data) => getFlightInfo(data),
 };
 
-export async function main(userMessage, systemPrompt = null) {
+// Main function to communicate with GPT-4o model
+export async function main(userMessage) {
   const tool = {
-    "type": "function",
-    "function": {
+    type: "function",
+    function: {
       name: "getFlightInfo",
-      description:
-        "Returns information about the next flight between two cities." +
-        "This includes the name of the airline, flight number, and the date and time" +
-        "of the next flight",
+      description: "Returns information about the next flight between two cities.",
       parameters: {
-        "type": "object",
-        "properties": {
-          "originCity": {
-            "type": "string",
-            "description": "The name of the city where the flight originates",
-          },
-          "destinationCity": {
-            "type": "string",
-            "description": "The flight destination city",
-          },
+        type: "object",
+        properties: {
+          originCity: { type: "string", description: "Origin city" },
+          destinationCity: { type: "string", description: "Destination city" },
         },
-        "required": ["originCity", "destinationCity"],
+        required: ["originCity", "destinationCity"],
       },
     },
   };
 
-  const client = new OpenAI({ baseURL: endpoint, apiKey: token });
+  const messages = [
+    { role: "user", content: userMessage },
+  ];
 
-  let messages = [];
-  
-  if (systemPrompt) {
-    messages.push({ role: "system", content: systemPrompt });
-  }
-  
-  messages.push({ role: "user", content: userMessage });
+  try {
+    const response = await fetch(`${endpoint}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messages: messages,
+        tools: [tool],
+        model: modelName,
+      }),
+    });
 
-  let response = await client.chat.completions.create({
-    messages: messages,
-    tools: [tool],
-    model: modelName,
-  });
+    const data = await response.json();
 
-  if (response.choices[0].finish_reason === "tool_calls") {
-    messages.push(response.choices[0].message);
+    if (data.choices[0].finish_reason === "tool_calls") {
+      const toolCall = data.choices[0].message.tool_calls[0];
+      const functionArgs = JSON.parse(toolCall.function.arguments);
+      const callableFunc = namesToFunctions[toolCall.function.name];
+      const functionReturn = callableFunc(functionArgs);
 
-    if (response.choices[0].message && response.choices[0].message.tool_calls.length === 1) {
-      const toolCall = response.choices[0].message.tool_calls[0];
-      if (toolCall.type === "function") {
-        const functionArgs = JSON.parse(toolCall.function.arguments);
-        console.log(`Calling function \`${toolCall.function.name}\` with arguments ${toolCall.function.arguments}`);
-        const callableFunc = namesToFunctions[toolCall.function.name];
-        const functionReturn = callableFunc(functionArgs);
-        console.log(`Function returned = ${functionReturn}`);
-
-        messages.push({
-          tool_call_id: toolCall.id,
-          role: "tool",
-          name: toolCall.function.name,
-          content: functionReturn,
-        });
-
-        response = await client.chat.completions.create({
-          messages: messages,
-          tools: [tool],
-          model: modelName,
-        });
-        console.log(`Model response = ${response.choices[0].message.content}`);
-      }
+      console.log(`Function result: ${functionReturn}`);
+      return functionReturn;
     }
+  } catch (error) {
+    console.error("Error:", error.message);
+    return { error: error.message };
   }
-
-  return response.choices[0].message.content;
 }
