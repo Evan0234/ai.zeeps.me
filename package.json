@@ -1,0 +1,11 @@
+{
+  "name": "zeeps-bot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "openai": "^3.0.0"
+  },
+  "scripts": {
+    "start": "node index.js"
+  }
+}
