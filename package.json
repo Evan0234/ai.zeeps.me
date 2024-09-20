@@ -1,13 +1,14 @@
 {
   "name": "ai.zeeps.me",
   "version": "1.0.0",
-  "description": "AI integration for ai.zeeps.me",
+  "description": "AI integration for GPT-4o from GitHub Marketplace",
   "main": "ai.js",
   "scripts": {
     "build": "echo 'Building the project'",
     "start": "node ai.js"
   },
   "dependencies": {
-    "openai": "^3.0.0"
+    "dotenv": "^16.0.3",
+    "node-fetch": "^3.0.0"
   }
 }
